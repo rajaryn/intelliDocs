@@ -22,3 +22,4 @@ logs/
 chroma_db/
 
 test_connect.py
+migrate_vector.py

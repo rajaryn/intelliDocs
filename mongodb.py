@@ -81,3 +81,16 @@ def get_chat_history(session_id: str) -> list:
     except Exception as e:
         print(f"Error retrieving history: {e}")
         return []
+    
+
+def delete_chat_history(session_id: str):
+    """
+    Deletes all chat messages associated with a specific session(document) ID.
+    """
+    try:
+        result = chat_history_collection.delete_many({"session_id": session_id})
+        print(f"Deleted {result.deleted_count} chat messages for {session_id} from MongoDB.")
+        return True
+    except Exception as e:
+        print(f"Error deleting from MongoDB: {e}")
+        return False

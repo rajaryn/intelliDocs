@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IntelliDocs - Chat with your PDFs</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
+    />
+    <style>
+      /* --- CUSTOM STYLES --- */
+      
+      /* 1. Global Layout (Match Dashboard) */
+      body {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        margin: 0;
+      }
+
+      /* 2. Navbar (Matches Dashboard Width) */
+      .header-nav {
+        padding: 1rem 2rem; /* Add horizontal padding like dashboard */
+        border-bottom: 1px solid var(--pico-muted-border-color);
+      }
+
+      /* 3. Hero Section (Reduced Fonts) */
+      .hero {
+        text-align: center;
+        padding: 5rem 1rem; /* Slightly less padding */
+        background: radial-gradient(circle at top, #1e293b 0%, #111827 100%);
+        border-bottom: 1px solid var(--pico-muted-border-color);
+        flex-grow: 1; /* Pushes footer down */
+      }
+      .hero h1 {
+        font-size: 2.5rem; /* Reduced from 3.5rem */
+        font-weight: 800;
+        margin-bottom: 0.75rem;
+        background: linear-gradient(to right, #60a5fa, #a78bfa);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .hero p {
+        font-size: 1.1rem; /* Reduced from 1.25rem */
+        color: #94a3b8;
+        max-width: 600px;
+        margin: 0 auto 2rem auto;
+        line-height: 1.6;
+      }
+
+      /* 4. Feature Cards */
+      .features {
+        padding: 4rem 0;
+      }
+      .feature-card {
+        padding: 1.5rem;
+        border: 1px solid var(--pico-muted-border-color);
+        border-radius: 8px;
+        background-color: var(--pico-card-background-color);
+        transition: transform 0.2s ease, border-color 0.2s ease;
+        text-align: center;
+      }
+      .feature-card:hover {
+        transform: translateY(-3px);
+        border-color: var(--pico-primary);
+      }
+      .feature-icon {
+        font-size: 1.75rem;
+        margin-bottom: 0.75rem;
+        display: block;
+      }
+      .feature-card h3 {
+        font-size: 1.25rem;
+        margin-bottom: 0.5rem;
+      }
+      .feature-card p {
+        font-size: 0.9rem;
+        color: #94a3b8;
+      }
+
+      /* 5. Tech Stack Badges */
+      .tech-stack {
+        text-align: center;
+        padding: 2.5rem 0;
+        background-color: #0f172a;
+      }
+      .badge {
+        display: inline-block;
+        padding: 0.4rem 0.8rem;
+        margin: 0.4rem;
+        border-radius: 50px;
+        background-color: #1e293b;
+        color: #cbd5e1;
+        font-size: 0.8rem;
+        border: 1px solid #334155;
+      }
+
+      /* 6. Footer */
+      footer {
+        padding: 2rem 0;
+        text-align: center;
+        border-top: 1px solid var(--pico-muted-border-color);
+        font-size: 0.85rem;
+        color: #64748b;
+      }
+    </style>
+  </head>
+  <body>
+    
+    <nav class="container-fluid header-nav">
+      <ul>
+        <li>
+          <a href="{{ url_for('index') }}" class="contrast">
+            <strong>IntelliDocs</strong>
+          </a>
+        </li>
+      </ul>
+      <ul>
+        {% if session.get('user_id') %}
+          <li><a href="{{ url_for('dashboard') }}" role="button">Go to Dashboard</a></li>
+        {% else %}
+          <li><a href="{{ url_for('login') }}" role="button" class="secondary outline">Login</a></li>
+          <li><a href="{{ url_for('register') }}" role="button">Sign Up</a></li>
+        {% endif %}
+      </ul>
+    </nav>
+
+    <header class="hero">
+      <div class="container">
+        <h1>Unlock the Knowledge<br>in your Documents</h1>
+        <p>
+          Upload PDFs, ask complex questions, and get instant, AI-powered answers. 
+          Built for students, researchers, and professionals.
+        </p>
+        
+        {% if session.get('user_id') %}
+          <a href="{{ url_for('dashboard') }}" role="button" style="padding: 0.5rem 1.5rem; border-radius: 50px;">Launch App</a>
+        {% endif %}
+        
+        <p style="margin-top: 2rem; font-size: 0.85rem; opacity: 0.6;">
+          Open Source • Secure • Fast
+        </p>
+      </div>
+    </header>
+
+    <main class="container features">
+      <div class="grid">
+        
+        <article class="feature-card">
+          <span class="feature-icon">📂</span>
+          <h3>1. Upload</h3>
+          <p>
+            Securely upload your PDFs to the cloud. We handle storage and parsing automatically.
+          </p>
+        </article>
+
+        <article class="feature-card">
+          <span class="feature-icon">🧠</span>
+          <h3>2. Analyze</h3>
+          <p>
+            Our AI generates vector embeddings, making documents searchable by meaning.
+          </p>
+        </article>
+
+        <article class="feature-card">
+          <span class="feature-icon">💬</span>
+          <h3>3. Chat</h3>
+          <p>
+            Ask questions in natural language. The AI retrieves context and gives cited answers.
+          </p>
+        </article>
+
+      </div>
+    </main>
+
+    <section class="tech-stack">
+      <div class="container">
+        <h6 style="color: #64748b; margin-bottom: 1rem; font-size: 0.8rem; letter-spacing: 1px;">POWERED BY MODERN TECH</h6>
+        <div>
+          <span class="badge">Python Flask</span>
+          <span class="badge">TiDB (SQL)</span>
+          <span class="badge">Pinecone (Vector DB)</span>
+          <span class="badge">Cloudinary</span>
+          <span class="badge">MongoDB</span>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="container">
+        Built by <strong>Raj Aryan</strong> for MCA Project.<br>
+        &copy; 2025 IntelliDocs. All rights reserved.
+      </div>
+    </footer>
+
+  </body>
+</html>

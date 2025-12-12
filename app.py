@@ -23,6 +23,7 @@ import mongodb
 import email_server
 import secrets
 import hashlib
+from user_manager import delete_user_account
 
 database.init_db()  # Ensures DB and tables exist
 
@@ -41,12 +42,13 @@ cloudinary.config(
 
 @app.route('/')
 def index():
-    return render_template('signup.html')
+    return render_template('index.html')
 
 
 @app.route('/signup', methods=['GET','POST'])
+@app.route('/register', methods=['GET', 'POST'])
 def register():
-       if request.method=='POST': 
+    if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
         confirm_password = request.form['confirm_password']
@@ -62,24 +64,25 @@ def register():
             flash('An account with this email already exists.', 'danger')
             return render_template('signup.html', email=email)
         
-        
         # Hash the password
         password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
 
         # Add user to the database
-        new_user_id=database.add_user(email, password_hash)
+        new_user_id = database.add_user(email, password_hash)
 
-        #Auto Login
+        # Auto Login
         if new_user_id:
             session['user_id'] = new_user_id
             session['user_email'] = email
             
             flash('Account created and you are now logged in!', 'success')
-            return redirect(url_for('dashboard')) # Redirect to the main page
-        
+            return redirect(url_for('dashboard')) 
         else:
             flash('An error occurred while creating your account. Please try again.', 'danger')
             return render_template('signup.html', email=email)
+
+    # It handles the GET request (showing the page).
+    return render_template('signup.html')
         
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -537,5 +540,36 @@ def chat_with_document(doc_id):
         return {"error": f"An internal server error occurred: {str(e)}"}, 500
 
 
+@app.route('/delete_account', methods=['POST'])
+def delete_account():
+    # 1. Security Check: Ensure user is actually logged in
+    if 'user_id' not in session:
+        flash("You must be logged in to perform this action.", "danger")
+        return redirect(url_for('login')) # Adjust 'login' to whatever your login route function is called
+    
+    user_id = session['user_id']
+    
+    print(f"User {user_id} requested account deletion.")
+
+    # 2. Call the Manager Function
+    success, message = delete_user_account(user_id)
+    
+    # 3. Handle Result
+    if success:
+        # A. Cleanup the session (Log them out)
+        session.clear()
+        
+        # B. User Feedback
+        flash("Your account and all associated data (documents, chat history) have been permanently deleted.", "success")
+        
+        # C. Redirect to Home/Landing page
+        return redirect(url_for('index')) # Adjust 'index' to your home route
+        
+    else:
+        # If something went wrong (e.g., Database error)
+        flash(f"Error deleting account: {message}", "danger")
+        return redirect(url_for('dashboard')) # Redirect back to their dashboard/settings
+
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True,use_reloader=True)

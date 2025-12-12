@@ -20,3 +20,5 @@ logs/
 *.log
 
 chroma_db/
+
+test_connect.py

@@ -1,4 +1,4 @@
-import ollama
+from llm_client import client
 import vector_store
 import mongodb
 import json
@@ -35,7 +35,7 @@ def get_routing_decision(history: list, user_question: str) -> str:
     """
     
     try:
-        response = ollama.chat(
+        response = client.chat(
             model=MODEL,
             messages=[{'role': 'user', 'content': prompt}]
         )
@@ -119,7 +119,7 @@ def answer_from_document(doc_id: int, user_question: str):
     # 4. Call the Ollama model
     try:
         print(f"\n... Sending final prompt to {MODEL} ...\n")
-        response = ollama.chat(
+        response = client.chat(
             model=MODEL,
             messages=messages
         )

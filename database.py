@@ -1,4 +1,5 @@
 import os,dotenv
+import certifi
 import mysql.connector
 from mysql.connector import Error,pooling
 
@@ -7,14 +8,26 @@ from mysql.connector import Error,pooling
 def create_db_pool():
     """Creates a connection pool for the database."""
     try:
-        pool = pooling.MySQLConnectionPool(
-            pool_name="intellidocs_pool",
-            pool_size=5,
-            host=os.getenv('DB_HOST', 'localhost'),
-            user=os.getenv('DB_USER', 'root'),
-            password=os.getenv('DB_PASSWORD'),
-            database=os.getenv('DB_NAME', 'notes_db') # Connect directly to the DB
-        )
+        db_config = {
+            "pool_name": "intellidocs_pool",
+            "pool_size": 5,
+            "host": os.getenv('DB_HOST', 'localhost'),
+            "user": os.getenv('DB_USER', 'root'),
+            "password": os.getenv('DB_PASSWORD'),
+            "database": os.getenv('DB_NAME', 'notes_db'),
+            "port": int(os.getenv('DB_PORT', 3306)), # Added Port
+            "autocommit": True
+        }
+
+        # Check if we are in "Cloud Mode" (if SSL is needed)
+        if os.getenv('DB_SSL') == 'True':
+            print("Enabling SSL for Cloud Database...")
+            db_config["ssl_ca"] = "/etc/ssl/certs/ca-certificates.crt" # Linux/Mac default
+            db_config["ssl_ca"] = certifi.where() 
+            db_config["ssl_verify_identity"] = True
+
+        pool = pooling.MySQLConnectionPool(**db_config)
+        
         print("Database connection pool created successfully.")
         return pool
     except Error as e:
@@ -37,37 +50,43 @@ def get_db_connection():
         return None
 
 def init_db():
-    conn = None
-    cursor = None
-    try:
-        # Step 1: Connecting to the server WITHOUT a specific database to create it
-        print("Connecting to MySQL server to ensure database exists...")
-        conn = mysql.connector.connect(
-            host=os.getenv('DB_HOST', 'localhost'),
-            user=os.getenv('DB_USER', 'root'),
-            password=os.getenv('DB_PASSWORD')
-        )
-        cursor = conn.cursor()
-        db_name = os.getenv('DB_NAME', 'notes_db')
-        cursor.execute(f"CREATE DATABASE IF NOT EXISTS {db_name} DEFAULT CHARACTER SET 'utf8mb4'")
-        print(f"Database '{db_name}' is ready.")
+    # --- CHECK: CLOUD VS LOCAL ---
+    if os.getenv('DB_SSL') == 'True':
+        print("Cloud Mode: Skipping database creation (assuming pre-created).")
+    else:
+        # Step 1: Create Database (Local Only)
+        conn = None
+        cursor = None
+        try:
+            print("Connecting to MySQL server to ensure database exists...")
+            conn = mysql.connector.connect(
+                host=os.getenv('DB_HOST', 'localhost'),
+                user=os.getenv('DB_USER', 'root'),
+                password=os.getenv('DB_PASSWORD')
+            )
+            cursor = conn.cursor()
+            db_name = os.getenv('DB_NAME', 'notes_db')
+            cursor.execute(f"CREATE DATABASE IF NOT EXISTS {db_name} DEFAULT CHARACTER SET 'utf8mb4'")
+            print(f"Database '{db_name}' is ready.")
 
-    except Error as e:
-        print(f"Error during initial database creation: {e}")
-    finally:
-        if conn and conn.is_connected():
-            cursor.close()
-            conn.close()
+        except Error as e:
+            print(f"Error during initial database creation: {e}")
+        finally:
+            if conn and conn.is_connected():
+                cursor.close()
+                conn.close()
 
-    # Step 2: Using a connection from the pool to create the tables
+    # --- STEP 2: CREATE TABLES (Runs for BOTH Cloud and Local) ---
+    # Note: This is now un-indented to match the 'if/else' level
     conn = get_db_connection()
     if conn is None:
         print("Could not get DB connection from pool to create tables.")
         return
     
     try:
-        cursor=conn.cursor()
+        cursor = conn.cursor()
         print("Ensuring tables are created...")
+        
         users_table_sql = """
         CREATE TABLE IF NOT EXISTS users (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -79,44 +98,42 @@ def init_db():
         cursor.execute(users_table_sql)
         print("'users' table is ready.")
 
-        documents_table_sql=""" 
+        documents_table_sql = """ 
         CREATE TABLE IF NOT EXISTS documents (
-          id INT AUTO_INCREMENT PRIMARY KEY,
-          user_id INT NOT NULL,
-          filename VARCHAR(255) NOT NULL,
-          url VARCHAR(512) NOT NULL,
-          public_id VARCHAR(255) NOT NULL,
-          processing_status ENUM('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED') NOT NULL DEFAULT 'PENDING',
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          tags VARCHAR(512) DEFAULT NULL,
-          summary TEXT DEFAULT NULL,
-          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            filename VARCHAR(255) NOT NULL,
+            url VARCHAR(512) NOT NULL,
+            public_id VARCHAR(255) NOT NULL,
+            processing_status ENUM('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED') NOT NULL DEFAULT 'PENDING',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            tags VARCHAR(512) DEFAULT NULL,
+            summary TEXT DEFAULT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         ) ENGINE=InnoDB;
         """
-    
         cursor.execute(documents_table_sql)
         print("'documents' table is ready.")
 
-        password_resets_table_sql=""" 
+        password_resets_table_sql = """ 
         CREATE TABLE IF NOT EXISTS password_resets (
-         id INT AUTO_INCREMENT PRIMARY KEY,
-         user_id INT NOT NULL,
-         token_hash VARCHAR(64) NOT NULL UNIQUE,
-         expires_at DATETIME NOT NULL,
-         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-        );"""
-    
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            token_hash VARCHAR(64) NOT NULL UNIQUE,
+            expires_at DATETIME NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+        """
         cursor.execute(password_resets_table_sql)
-        print("'passwords_resets' table is ready.")
+        print("'password_resets' table is ready.")
 
     except Error as e:
         print(f"Error during table creation: {e}")
     finally:
         if conn and conn.is_connected():
             cursor.close()
-            conn.close() # This returns the connection to the pool
+            conn.close()
             print("Connection returned to pool.")
-
 
 # -------To add a user ---------
 def add_user(email, password_hash):

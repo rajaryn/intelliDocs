@@ -6,13 +6,16 @@ from dotenv import load_dotenv
 # Load variables from .env file
 load_dotenv()
 
-# --- Database Connection ---
+client = None
+db = None
+chat_history_collection = None
+
 try:
     MONGO_URI = os.getenv("MONGO_URI")
     MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "intellidocs")
 
     if not MONGO_URI:
-        raise Exception("MONGO_URI not found in .env file")
+        raise Exception("MONGO_URI not found in .env file. Make sure your .env file is correct.")
 
     # Create the client and connect
     client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
@@ -23,15 +26,14 @@ try:
     # Get the database
     db = client[MONGO_DB_NAME]
     
-    # Get the collection (like a table) where histories will be stored
-    chat_history_collection = db["chat_histories"]
+    chat_history_collection = db["chat_histories"] 
 
     print("Successfully connected to MongoDB Atlas.")
 
 except ConnectionFailure as e:
     print(f"Could not connect to MongoDB: {e}")
-    # You might want to exit the app if the DB connection fails
-    # sys.exit(1) 
+    print("Please check your MONGO_URI, network access, or Atlas IP whitelist.")
+    # sys.exit(1) # Optionally exit if the DB is required
 except Exception as e:
     print(f"An error occurred during DB initialization: {e}")
 # --- End of Connection ---

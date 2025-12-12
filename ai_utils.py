@@ -1,4 +1,4 @@
-import ollama
+from llm_client import client
 
 def generate_tags_for_text(text: str) -> list[str]:
     max_text_length = 8000
@@ -18,7 +18,7 @@ def generate_tags_for_text(text: str) -> list[str]:
     
     try:
         # Call the local Ollama API. By default, stream=False.
-        response = ollama.chat(
+        response = client.chat(
             model='qwen2.5:1.5b',
             messages=[
                 {
@@ -77,7 +77,7 @@ def generate_summary_for_text(text: str) -> str:
     
     try:
         # Call the local Ollama API.
-        response = ollama.chat(
+        response = client.chat(
             model='qwen2.5:1.5b',
             messages=[
                 {
